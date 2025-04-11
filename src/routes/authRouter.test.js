@@ -1,8 +1,8 @@
 const request = require('supertest');
-const jwt = require('jsonwebtoken');
+//const jwt = require('jsonwebtoken');
 const app = require('../service');
-const { DB, Role } = require('../database/database');
-const config = require('../config');
+//const { DB, Role } = require('../database/database');
+//const config = require('../config');
 
 function randomEmail() {
   return `${Math.random().toString(36).substring(2, 12)}@test.com`;

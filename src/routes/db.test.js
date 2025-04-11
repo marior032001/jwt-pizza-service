@@ -1,5 +1,5 @@
 const { DB } = require('../database/database');
-const { StatusCodeError } = require('../endpointHelper');
+//const { StatusCodeError } = require('../endpointHelper');
 
 const mockConnection = {
   execute: jest.fn(),
