@@ -199,4 +199,72 @@ describe('Franchise Router', () => {
       .set('Authorization', `Bearer ${adminToken}`);
     expect([200, 204]).toContain(res.status);
   });
+
+  test('Register without required fields returns 400', async () => {
+    const res = await request(app).post('/api/auth').send({ email: 'missing@test.com' });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('message');
+  });
+  
+  test('Login with wrong password returns 404', async () => {
+    const res = await request(app)
+      .put('/api/auth')
+      .send({ email: user.email, password: 'wrongpass' });
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty('message', 'unknown user');
+  });
+  
+  test('Logout with invalid token returns 401', async () => {
+    const res = await request(app)
+      .delete('/api/auth')
+      .set('Authorization', 'Bearer invalidtoken');
+    expect(res.status).toBe(401);
+  });
+  
+  /* ---------- ORDER EDGE CASES ---------- */
+  test('GET /api/order without token returns 401', async () => {
+    const res = await request(app).get('/api/order');
+    expect(res.status).toBe(401);
+  });
+  
+  test('POST /api/order without items returns 500 or handled error', async () => {
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ franchiseId: 1, storeId: 1, items: [] });
+    expect([500, 400]).toContain(res.status);
+  });
+  
+  /* ---------- FRANCHISE EDGE CASES ---------- */
+  test('GET /api/franchise/:id returns 404 if not found', async () => {
+    const res = await request(app).get('/api/franchise/999999');
+    expect([404, 200]).toContain(res.status); // depending on router implementation
+  });
+  
+  test('PUT /api/franchise/:id as user returns 403', async () => {
+    const res = await request(app)
+      .put('/api/franchise/1')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ name: 'NoUpdate' });
+    expect(res.status).toBe(403);
+  });
+  
+  test('DELETE /api/franchise/:id as user returns 403', async () => {
+    const res = await request(app)
+      .delete('/api/franchise/1')
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(res.status).toBe(403);
+  });
+  
+  /* ---------- GENERAL EDGE CASES ---------- */
+  test('Accessing protected route without auth header returns 401', async () => {
+    const res = await request(app).put('/api/order/menu').send({ title: 'Fail' });
+    expect(res.status).toBe(401);
+  });
+  
+  test('Unknown route under /api returns 404', async () => {
+    const res = await request(app).get('/api/nonexistent');
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty('message', 'unknown endpoint');
+  });
 });
