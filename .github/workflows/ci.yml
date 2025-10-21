@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build and Test
+    name: Build
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -19,33 +19,20 @@ jobs:
         ports:
           - '3306:3306'
         options: >-
-          --health-cmd "mysqladmin ping -ptempdbpassword"
-          --health-interval 10s
-          --health-start-period 10s
-          --health-timeout 5s
+          --health-cmd "mysqladmin ping -ptempdbpassword" 
+          --health-interval 10s 
+          --health-start-period 10s 
+          --health-timeout 5s 
           --health-retries 10
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Set version
-        id: set_version
-        run: |
-          version=$(date +'%Y%m%d.%H%M%S')
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          printf '{"version": "%s" }' "$version" > src/version.json
 
       - name: Write config file
         run: |
@@ -67,20 +54,27 @@ jobs:
             },
           };" > src/config.js
 
-      - name: Run database migrations / seed (optional)
-        run: |
-          # If you have migration scripts, run them here, e.g.:
-          # node src/database/initialize.js
-          echo "Database ready (add migrations/seeds here if needed)"
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Run tests
-        run: npm test
-        env:
-          NODE_ENV: test
+      - name: Lint
+        run: npm run lint
+
+      - name: Set version
+        id: set_version
+        run: |
+          version=$(date +'%Y%m%d.%H%M%S')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          printf '{"version": "%s" }' "$version" > src/version.json
+
+      - name: Run tests and generate coverage
+        run: npm test -- --coverage
 
       - name: Update coverage badge
         run: |
           coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
           color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
-          curl -s -X POST "https://pizza-factory.cs329.click/api/badge/${{ secrets.NET_ID }}/jwtpizzaservicecoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
+          curl -s -X POST \
+            "https://pizza-factory.cs329.click/api/badge/${{ secrets.NET_ID }}/jwtpizzaservicecoverage?label=Coverage&value=$coverage%25&color=$color" \
+            -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
 
